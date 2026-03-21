@@ -3,13 +3,13 @@ import numpy as np # Used for numerical operations on arrays and matrices
 import tensorflow as tf # Used for building and training machine learning models
 
 # Loading the training data from the csv file
-training_data = pd.read_csv('hand_gesture_training_data.csv')
+training_data = pd.read_csv('hand_gesture_training_data.csv', sep=';') # Use  ';' as the separator
 
 # Split the data into features (X) and labels
 # Taking the training_data variable and selecting all rows and columns except the last
-X = training_data.iloc[:,-1].values.astype('float32')
+X = training_data.iloc[:, :-1].values.astype('float32')
 # Taking the training_data variable and selecting all rows and only the last column
-labels = training_data.iloc[:,-1].values
+labels = training_data.iloc[:, -1].values
 
 # Convert labels into numerical format
 # Get unique label names and sort them alphabetically, shortens the variable to only the 4 label names
