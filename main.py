@@ -10,6 +10,10 @@ from mediapipe.tasks.python import vision
 def startCamera():
     return cv2.VideoCapture(0)
 
+# 0 = horse
+# 1 = ram
+# 2 = bird
+# 3 = serpent
 gesture_name = "serpent" # Change this to the name of the gesture you want to capture for the csv file for training
 
 
