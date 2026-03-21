@@ -10,6 +10,8 @@ from mediapipe.tasks.python import vision
 def startCamera():
     return cv2.VideoCapture(0)
 
+
+
 # 0 = horse
 # 1 = ram
 # 2 = bird

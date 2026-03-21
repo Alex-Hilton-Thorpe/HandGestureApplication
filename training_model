@@ -1,0 +1,73 @@
+import pandas as pd  # Used for data manipulation and analysis
+import numpy as np # Used for numerical operations on arrays and matrices
+import tensorflow as tf # Used for building and training machine learning models
+
+# Loading the training data from the csv file
+training_data = pd.read_csv('hand_gesture_training_data.csv')
+
+# Split the data into features (X) and labels
+# Taking the training_data variable and selecting all rows and columns except the last
+X = training_data.iloc[:,-1].values.astype('float32')
+# Taking the training_data variable and selecting all rows and only the last column
+labels = training_data.iloc[:,-1].values
+
+# Convert labels into numerical format
+# Get unique label names and sort them alphabetically, shortens the variable to only the 4 label names
+label_names = sorted(np.unique(labels))
+# Create a mapping from label names to indices
+label_to_index = {name: i for i, name in enumerate(label_names)}
+# Go through all lines (4000) and then replace each name with the corresponding index (above)
+y = np.array([label_to_index[label] for label in labels], dtype='int32')
+# Get number of unique classes
+number_of_classes = len(label_names)
+# Get number of input features (number of columns in X)
+input_dimension = X.shape[1]
+
+# Split data into training and validation sets (80/20)
+# Training sets: Data that will be used to train the model
+# Validation sets: Data that will be used to evaluate the model's performance during training
+number_samples = X.shape[0]
+# need to shuffle the data before splitting
+indices = np.arange(number_samples)
+np.random.shuffle(indices)
+# Apply shuffle to X and Y
+X = X[indices]
+y = y[indices]
+# Split the data
+# Calculate the index at which to split the data (80% for training, 20% for validation)
+split = int(0.8 * number_samples)
+X_train, X_validation = X[:split], X[split:]
+y_train, y_validation = y[:split], y[split:]
+
+# Build and train a classifier
+# Using most simple version: Sequential
+model = tf.keras.Sequential([
+    tf.keras.layers.Input(shape=(input_dimension,)), # Define input shape: 42 features per sample
+    tf.keras.layers.Dense(64, activation='relu'), # Hidden layer with 64 neurons and ReLU activation function (if less than 0 set to 0)
+    tf.keras.layers.Dense(64, activation='relu'), # Another hidden layer with 64 neurons and ReLU activation function
+    tf.keras.layers.Dense(number_of_classes, activation='softmax') # Output layer with number of classes and softmax activation function for multi-class classification
+]) # Sequential model that takes 42 features, passes through 2 hidden layers, and outputs a probability for each class
+
+model.compile(
+        optimizer='adam', # adam optimizer: Algorithm that adjusts weights (learning rate) in the model after each batch of data to reduce loss. Works well in most situations without tuning
+        loss='sparse_categorical_crossentropy', # cross entropy loss function: Measures how wrong the model's predictions are compared to predicted probabilities against true labels.
+        metrics=['accuracy'] # Metric to monitor during training
+)# Configure the model with adam optimizer, cross entropy loss function, and accuracy metric
+
+# Actual training of the model
+history = model.fit(
+    X_train, y_train, # Training data and labels
+    validation_data=(X_validation, y_validation), # Validation data and labels for evaluating model performance during training
+    epochs=50, # Number of times to iterate over the entire training dataset (Too low: underfitting (not learning enough), Too high: overfitting (memorizes training data))
+    batch_size=32 # Number of samples per gradient update (how many samples to process before updating the model's weights) (Too low: Slower training but will find better solutions, Too high: Faster but will miss patterns)
+)  # Train the model on the training set, adjusting weights each epoch in batches of 32, monitoring performance on the validation set
+
+# Finishing off by saving the model to a file for later use
+model.save('hand_gesture_model.keras')
+
+# Save label mapping to be able to decode predictions later
+import json
+with open('label_mapping.json', 'w') as f: #  opens a file for writing
+    json.dump(label_names, f) # writes label names into JSON file
+    
+# library for saving data in JSON format, which is just a standard readable text format for storing data
