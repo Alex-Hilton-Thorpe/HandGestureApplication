@@ -1,0 +1,116 @@
+import cv2
+import csv
+import mediapipe as mp # Main package
+from mediapipe import Image, ImageFormat # Image and format types used by the tasks API
+# Tasks API modules 
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
+import tensorflow as tf
+import json
+import numpy as np
+import keyboard
+import time
+import subprocess
+import os
+last_triggered = 0
+
+def startCamera():
+    capture = cv2.VideoCapture(0); # 0 is the default camera
+    if not capture.isOpened():
+        print("Failed to open camera")
+        return None
+    return capture
+
+base_opts = python.BaseOptions(model_asset_path="hand_landmarker.task");
+
+opts = vision.HandLandmarkerOptions(
+    base_options = base_opts,
+    num_hands = 2,
+    min_hand_detection_confidence = 0.5,
+    min_hand_presence_confidence = 0.5,
+    min_tracking_confidence = 0.5
+)
+
+# Creates the hand tracking object
+hand_landmarker = vision.HandLandmarker.create_from_options(opts)
+
+# Load the trained model
+model = tf.keras.models.load_model('hand_gesture_model.keras')
+
+# Load the label mapping
+with open('label_mapping.json', 'r') as f:
+    label_names = json.load(f)
+
+detection_mode = False
+
+if __name__ == "__main__":
+
+    flag = False;
+    capture = startCamera();
+    
+    while(1):
+        if not flag:
+            print("Press Shift + F1 to start hand gesture detection.")
+            flag = True
+            
+        if keyboard.is_pressed('shift+f1'):
+            detection_mode = True
+            capture = startCamera();
+        
+        # Press Shift + F2 to completely exit the program
+        if keyboard.is_pressed('shift+f2'):
+            break
+        
+        if detection_mode:
+            ret, frame = capture.read();
+            
+            if not ret:
+                print("Failed to capture frames");
+                break
+            
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB);
+            mp_image = Image(image_format=ImageFormat.SRGB, data=rgb_frame);
+            results = hand_landmarker.detect(mp_image);
+            if results.hand_landmarks:
+                for hand_landmarks in results.hand_landmarks:
+                    features = []
+                    for landmark in hand_landmarks:
+                        x = int(landmark.x * frame.shape[1]) # Convert normalized x to pixel coordinate
+                        y = int(landmark.y * frame.shape[0]) # Convert normalized y to pixel coordinate
+                        cv2.circle(frame, (x, y), 5, (0, 0, 255), -1)
+                        features.append(landmark.x)
+                        features.append(landmark.y)
+                        
+                    np_features = np.array([features], dtype='float32');
+                    prediction = model.predict(np_features, verbose=0);
+                    predicted_label = label_names[np.argmax(prediction[0])];
+                    confidence = np.max(prediction[0]);
+                    if confidence > 0.85 and time.time() - last_triggered > 2:
+                        
+                        if predicted_label == "horse":
+                            os.system("start whatsapp:");
+                            detection_mode = False
+                            cv2.destroyWindow('Hand Gesture Capture')
+                            capture.release();
+                        elif predicted_label == "serpent":
+                            os.system("start spotify:")
+                            detection_mode = False
+                            cv2.destroyWindow('Hand Gesture Capture')
+                            capture.release();
+                        
+                        cv2.putText(frame, predicted_label, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
+                        last_triggered = time.time()
+                        
+            if detection_mode:
+                cv2.imshow('Hand Gesture Capture', frame);
+                
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                detection_mode = False
+                cv2.destroyAllWindows()
+        
+        time.sleep(0.01)
+    
+    # Cleanup on exit
+    capture.release()
+    cv2.destroyAllWindows()
+    print("Application closed")

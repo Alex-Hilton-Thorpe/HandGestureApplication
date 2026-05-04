@@ -10,13 +10,7 @@ from mediapipe.tasks.python import vision
 def startCamera():
     return cv2.VideoCapture(0)
 
-
-
-# 0 = horse
-# 1 = ram
-# 2 = bird
-# 3 = serpent
-gesture_name = "serpent" # Change this to the name of the gesture you want to capture for the csv file for training
+gesture_name = "nothing" # Change this to the name of the gesture you want to capture for the csv file for training
 
 
 # Tells mediapipe where to find model file (hand_landmarker.task)
@@ -43,7 +37,7 @@ if __name__ == "__main__":
     
     capture = startCamera();
     with open('hand_gesture_training_data.csv', mode='a', newline='') as csv_file:
-        writer = csv.writer(csv_file)
+        writer = csv.writer(csv_file, delimiter=';')
         while(1):
             # Capture frame-by-frame
             # ret is a boolean indicating successful frame capture
